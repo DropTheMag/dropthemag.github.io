@@ -1,0 +1,367 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Theresa & Nolan — Word Finder (Rainbow Bright)</title>
+<style>
+  :root {
+    --bgA: #fff3e0;
+    --bgB: #e0f7fa;
+    --card: #ffffff;
+    --ink: #0f172a;
+    --accent: #7c3aed;
+    --accent2: #16a34a;
+    --accent3: #f59e0b;
+    --accent4: #0284c7;
+    --accent5: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; height:100%; font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: var(--ink);}
+  body {
+    background: linear-gradient(135deg, var(--bgA), var(--bgB));
+    display:flex; align-items:stretch; justify-content:center;
+  }
+  .app { width: min(980px, 100%); padding: 16px; }
+  h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
+  .sub { color:#475569; font-size: 14px; margin-bottom: 16px; }
+  .panel { background: var(--card); border-radius: 16px; padding: 16px; box-shadow: 0 6px 20px rgba(31,41,55,.12);}
+  .row { display:flex; gap:12px; flex-wrap: wrap; align-items: center; }
+  .grow { flex: 1 1 auto; }
+  .btn { appearance:none; border:1px solid #cbd5e1; background:white; color:#0f172a; border-radius:12px; padding:12px 16px; font-size:16px; font-weight:600; cursor:pointer; transition: transform .05s ease, box-shadow .2s ease; }
+  .btn:hover { box-shadow: 0 6px 16px rgba(15,23,42,.12);}
+  .btn:active { transform: scale(.98);}
+  .btn.primary { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border-color: transparent; }
+  .btn.accent { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; border-color: transparent; }
+  .btn.pill { border-radius: 999px; }
+  .tag { display:inline-block; padding:6px 10px; background:#f1f5f9; border-radius: 999px; font-size: 12px; color:#334155; }
+  .cards { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
+  @media (min-width: 860px) { .cards { grid-template-columns: repeat(3, 1fr); } }
+  .card { background:white; border: 2px solid #e2e8f0; border-radius: 20px; padding: 22px; text-align:center; font-size: clamp(22px, 5vw, 34px); font-weight:700; cursor:pointer; user-select:none; transition: box-shadow .15s ease, transform .05s ease; }
+  .card:active { transform: scale(.98);}
+  .card.c1 { border-color:#7c3aed22; background: #7c3aed10; }
+  .card.c2 { border-color:#16a34a22; background: #16a34a10; }
+  .card.c3 { border-color:#f59e0b22; background: #f59e0b10; }
+  .card.c4 { border-color:#0284c722; background: #0284c710; }
+  .card.c5 { border-color:#ef444422; background: #ef444410; }
+  .card.c6 { border-color:#06b6d422; background: #06b6d410; }
+  .muted { color:#64748b; }
+  .topbar { display:flex; justify-content: space-between; align-items:center; gap: 8px; margin-bottom: 8px; }
+  .progress { height:10px; background:#e2e8f0; border-radius:999px; overflow:hidden; }
+  .progress > div { height:100%; background: linear-gradient(90deg, #22c55e, #16a34a); width:0%; }
+  .hidden { display:none !important; }
+  .settings { margin-top: 12px; display: grid; gap: 12px; grid-template-columns: 1fr; }
+  .settings .row label { font-size: 14px; color:#475569; }
+  input[type='number'] { width: 90px; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size: 16px; }
+  input[type='checkbox'] { transform: scale(1.2); }
+  .wordlist { max-height: 200px; overflow: auto; border:1px solid #e2e8f0; border-radius:12px; padding:8px; background:white; }
+  .worditem { display:flex; align-items:center; gap:8px; padding:6px 4px; border-bottom:1px dashed #e2e8f0; }
+  .worditem:last-child { border-bottom:none; }
+  .celebrate { position: fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.85); backdrop-filter: blur(4px); z-index: 10; flex-direction: column; text-align:center; }
+  .celebrate h2 { font-size: clamp(28px, 7vw, 56px); margin: 0 0 8px; }
+  .celebrate p { font-size: clamp(18px, 4vw, 24px); margin: 0 0 16px; }
+  canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 9; }
+  .small { font-size: 12px; }
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="app">
+  <div class="panel">
+    <div class="topbar">
+      <div>
+        <h1>Theresa &amp; Nolan — Word Finder</h1>
+        <div class="sub">Rainbow Bright · Mixed case · 6 choices · 25 rounds · <span class="tag">Grandma Mode</span> in settings</div>
+      </div>
+      <div class="row">
+        <button id="btnStart" class="btn primary pill">Start Session</button>
+        <button id="btnRepeat" class="btn pill accent">Repeat</button>
+      </div>
+    </div>
+    <div class="progress"><div id="prog"></div></div>
+
+    <div id="practice" class="">
+      <div id="prompt" class="sub" style="margin:12px 0 8px;">Find the word… <strong id="targetWord">_____</strong></div>
+      <div id="choices" class="cards"></div>
+    </div>
+
+    <div id="celebration" class="celebrate hidden" role="dialog" aria-live="polite">
+      <h2>🎉 YAY NOLAN! 🎉</h2>
+      <p>You did it!</p>
+      <div class="row" style="justify-content:center;">
+        <button id="btnPlayAgain" class="btn primary pill">Play Again</button>
+      </div>
+    </div>
+
+    <hr style="margin:16px 0; border:none; border-top:1px solid #e2e8f0;">
+
+    <details id="settings">
+      <summary class="btn pill" style="display:inline-block;">Grandma Mode (settings)</summary>
+      <div class="settings">
+        <div class="row">
+          <label>Choices per round:</label>
+          <input type="number" id="inpChoices" min="2" max="8" value="6"/>
+          <label>Rounds per session:</label>
+          <input type="number" id="inpRounds" min="5" max="50" value="25"/>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" id="chkSpell" checked/> Also spell it out (e.g., S-N-O-W… snow)</label>
+        </div>
+        <div class="row">
+          <button id="btnExport" class="btn pill">Export words</button>
+          <label class="btn pill" for="fileImport" style="cursor:pointer;">Import words<input id="fileImport" type="file" accept="application/json" class="hidden"></label>
+          <span class="small muted">Data is saved privately on this device (local).</span>
+        </div>
+        <div>
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <strong>Active Practice List</strong>
+            <div class="row">
+              <button id="btnSelectAll" class="btn pill">Select all</button>
+              <button id="btnClearAll" class="btn pill">Clear all</button>
+            </div>
+          </div>
+          <div id="wordList" class="wordlist"></div>
+        </div>
+      </div>
+    </details>
+
+  </div>
+</div>
+
+<script>
+// Utility
+const LS_KEY = "tn_wordfinder_v1";
+const rnd = (n) => Math.floor(Math.random()*n);
+const shuffle = (arr) => arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(p=>p[1]);
+function saveState(state){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+function loadState(){ try { return JSON.parse(localStorage.getItem(LS_KEY)) || null; } catch { return null; }}
+
+// Audio chime
+const audio = {
+  ctx: null,
+  chime(){
+    try {
+      if(!this.ctx) this.ctx = new (window.AudioContext||window.webkitAudioContext)();
+      const now = this.ctx.currentTime;
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.connect(g); g.connect(this.ctx.destination);
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(880, now);
+      o.frequency.exponentialRampToValueAtTime(1320, now+0.18);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.3, now+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now+0.35);
+      o.start(now); o.stop(now+0.36);
+    } catch(e) {}
+  },
+};
+
+// Speech
+function speak(text) {
+  if(!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.95;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+// Confetti
+const confetti = (()=>{
+  const canvas = document.getElementById('confetti');
+  const ctx = canvas.getContext('2d');
+  let W, H, pieces=[]; 
+  function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+  function spawn(n=150){
+    pieces = Array.from({length:n},()=>({
+      x: Math.random()*W,
+      y: -20 - Math.random()*H,
+      r: 6+Math.random()*6,
+      c: ['#ef4444','#f59e0b','#22c55e','#06b6d4','#3b82f6','#a855f7'][rnd(6)],
+      s: 2+Math.random()*3,
+      a: Math.random()*Math.PI*2
+    }));
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(const p of pieces){
+      p.y += p.s; p.x += Math.sin(p.y*0.02); p.a += 0.03;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.a);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(-p.r/2, -p.r/2, p.r, p.r*0.6);
+      ctx.restore();
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  return { go(){ spawn(240); setTimeout(()=>spawn(0), 2500); }};
+})();
+
+// State
+const STATE = loadState() || {
+  choices: 6,
+  rounds: 25,
+  spell: true,
+  library: {words: ["a", "about", "after", "again", "all", "am", "an", "and", "any", "are", "as", "ask", "at", "away", "back", "ball", "be", "because", "been", "before", "best", "better", "big", "black", "blue", "both", "bring", "brown", "but", "by", "call", "came", "can", "carry", "clean", "cold", "come", "cut", "day", "did", "do", "does", "done", "down", "draw", "drink", "eat", "eight", "every", "fall", "far", "fast", "find", "first", "five", "fly", "for", "found", "four", "from", "full", "funny", "gave", "get", "give", "go", "goes", "going", "good", "got", "green", "had", "has", "have", "he", "help", "her", "here", "hers", "him", "his", "hold", "hot", "how", "hurt", "I", "if", "in", "into", "is", "it", "its", "jump", "just", "keep", "kind", "know", "laugh", "let", "light", "like", "little", "live", "long", "look", "make", "many", "may", "me", "more", "most", "much", "must", "my", "myself", "near", "never", "new", "nine", "no", "not", "now", "of", "off", "old", "on", "once", "one", "only", "open", "or", "our", "out", "over", "own", "people", "play", "please", "pretty", "pull", "push", "put", "ran", "read", "red", "ride", "right", "round", "run", "said", "saw", "say", "see", "seven", "shall", "she", "show", "sing", "six", "sleep", "small", "soon", "start", "stop", "take", "tell", "ten", "thank", "that", "the", "their", "them", "then", "there", "these", "they", "think", "this", "those", "three", "to", "today", "together", "too", "try", "two", "under", "up", "upon", "us", "use", "very", "walk", "want", "warm", "was", "wash", "we", "well", "went", "were", "what", "when", "where", "which", "white", "who", "why", "will", "wish", "with", "work", "would", "write", "yellow", "yes", "you", "your"]},
+  active: [],
+  history: {},
+};
+
+if(!STATE.active || STATE.active.length===0){
+  STATE.active = STATE.library.words.slice(0, 60);
+}
+
+const el = {
+  btnStart: document.getElementById('btnStart'),
+  btnRepeat: document.getElementById('btnRepeat'),
+  btnPlayAgain: document.getElementById('btnPlayAgain'),
+  prompt: document.getElementById('prompt'),
+  targetWord: document.getElementById('targetWord'),
+  choices: document.getElementById('choices'),
+  prog: document.getElementById('prog'),
+  celebration: document.getElementById('celebration'),
+  settings: document.getElementById('settings'),
+  inpChoices: document.getElementById('inpChoices'),
+  inpRounds: document.getElementById('inpRounds'),
+  chkSpell: document.getElementById('chkSpell'),
+  wordList: document.getElementById('wordList'),
+  btnExport: document.getElementById('btnExport'),
+  fileImport: document.getElementById('fileImport'),
+  btnSelectAll: document.getElementById('btnSelectAll'),
+  btnClearAll: document.getElementById('btnClearAll'),
+};
+
+el.inpChoices.value = STATE.choices;
+el.inpRounds.value = STATE.rounds;
+el.chkSpell.checked = STATE.spell;
+
+function renderWordList(){
+  const all = STATE.library.words;
+  const activeSet = new Set(STATE.active);
+  el.wordList.innerHTML = '';
+  for(const w of all){
+    const row = document.createElement('div');
+    row.className='worditem';
+    const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = activeSet.has(w);
+    cb.addEventListener('change', ()=>{ 
+      if(cb.checked) STATE.active.push(w); else STATE.active = STATE.active.filter(x=>x!==w);
+      STATE.active = Array.from(new Set(STATE.active));
+      saveState(STATE);
+    });
+    const lab = document.createElement('label'); lab.textContent = w;
+    row.append(cb, lab);
+    el.wordList.appendChild(row);
+  }
+}
+renderWordList();
+
+el.btnSelectAll.addEventListener('click', ()=>{
+  STATE.active = [...STATE.library.words];
+  saveState(STATE); renderWordList();
+});
+el.btnClearAll.addEventListener('click', ()=>{
+  STATE.active = [];
+  saveState(STATE); renderWordList();
+});
+
+el.inpChoices.addEventListener('change', ()=>{ STATE.choices = Math.max(2, Math.min(8, parseInt(el.inpChoices.value||6))); saveState(STATE); });
+el.inpRounds.addEventListener('change', ()=>{ STATE.rounds = Math.max(5, Math.min(50, parseInt(el.inpRounds.value||25))); saveState(STATE); });
+el.chkSpell.addEventListener('change', ()=>{ STATE.spell = !!el.chkSpell.checked; saveState(STATE); });
+
+el.btnExport.addEventListener('click', ()=>{
+  const data = new Blob([JSON.stringify({ library: STATE.library, active: STATE.active }, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(data);
+  const a = document.createElement('a'); a.href=url; a.download='tn-words.json'; a.click(); URL.revokeObjectURL(url);
+});
+el.fileImport.addEventListener('change', async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const txt = await f.text();
+  try {
+    const j = JSON.parse(txt);
+    if(j.library && Array.isArray(j.library.words)) STATE.library.words = j.library.words;
+    if(Array.isArray(j.active)) STATE.active = j.active;
+    saveState(STATE); renderWordList();
+  } catch(e) { alert('Could not read that file.'); }
+});
+
+let session = null;
+function newSession(){
+  const pool = (STATE.active && STATE.active.length>0) ? [...STATE.active] : [...STATE.library.words];
+  if(pool.length < STATE.choices) { alert('Please select more words in Grandma Mode.'); return; }
+  const rounds = [];
+  for(let r=0; r<STATE.rounds; r++) {
+    const target = pool[r % pool.length];
+    const others = shuffle(pool.filter(w=>w!==target)).slice(0, STATE.choices-1);
+    const choices = shuffle([target, ...others]);
+    rounds.push({ target, choices });
+  }
+  session = { i: 0, rounds: shuffle(rounds), corrects: 0, picked: null };
+  document.getElementById('celebration').classList.add('hidden');
+  renderRound();
+  setTimeout(()=> repeatPrompt(), 200);
+}
+
+function renderRound(){
+  if(!session) return;
+  const r = session.rounds[session.i];
+  el.targetWord.textContent = r.target;
+  el.choices.innerHTML = '';
+  const colors = ['c1','c2','c3','c4','c5','c6'];
+  r.choices.forEach((choice, idx)=>{
+    const b = document.createElement('button');
+    b.className = 'card ' + colors[idx%colors.length];
+    b.textContent = choice;
+    b.addEventListener('click', ()=> pick(choice));
+    el.choices.appendChild(b);
+  });
+  const pct = Math.round((session.i)/(session.rounds.length)*100);
+  el.prog.style.width = pct + '%';
+}
+
+function repeatPrompt(){
+  if(!session) return;
+  const r = session.rounds[session.i];
+  const say = STATE.spell ? r.target.split('').join(' - ') + '. ' + r.target : r.target;
+  speak(say);
+}
+
+function pick(choice){
+  if(!session) return;
+  const r = session.rounds[session.i];
+  const correct = (choice === r.target);
+  if(correct){
+    audio.chime();
+    session.corrects++;
+    const nodes = el.choices.querySelectorAll('button');
+    nodes.forEach(n=>{ if(n.textContent===choice) n.style.boxShadow='0 0 0 4px rgba(34,197,94,.35)'; });
+    setTimeout(()=>nextRound(), 420);
+  } else {
+    setTimeout(()=> repeatPrompt(), 200);
+  }
+}
+
+function nextRound(){
+  if(!session) return;
+  if(session.i < session.rounds.length-1){
+    session.i++; renderRound(); setTimeout(()=> repeatPrompt(), 150);
+  } else {
+    el.prog.style.width = '100%';
+    celebrate();
+  }
+}
+
+function celebrate(){
+  document.getElementById('celebration').classList.remove('hidden');
+  confetti.go();
+}
+
+el.btnStart.addEventListener('click', newSession);
+el.btnRepeat.addEventListener('click', repeatPrompt);
+el.btnPlayAgain.addEventListener('click', newSession);
+</script>
+</body>
+</html>
