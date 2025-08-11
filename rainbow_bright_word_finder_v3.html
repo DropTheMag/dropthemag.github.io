@@ -1,0 +1,154 @@
+
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Theresa & Nolan — Word Finder (v3)</title>
+<style>
+:root{--bgA:#fff3e0;--bgB:#e0f7fa;--ink:#0f172a;--card:#fff;--c1:#7c3aed;--c2:#16a34a;--c3:#f59e0b;--c4:#0284c7;--c5:#ef4444;--c6:#06b6d4}
+.theme-rainbow{--bgA:#fff3e0;--bgB:#e0f7fa}.theme-sunny{--bgA:#fff7cc;--bgB:#ffe0b2}.theme-ocean{--bgA:#dbeafe;--bgB:#cffafe}.theme-jungle{--bgA:#dcfce7;--bgB:#bbf7d0}
+*{box-sizing:border-box}html,body{margin:0;padding:0;height:100%;font-family:ui-rounded,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--ink)}
+body{background:linear-gradient(135deg,var(--bgA),var(--bgB));display:flex;justify-content:center;transition:background .3s ease}
+.app{width:min(980px,100%);padding:16px}h1{margin:0 0 8px;font-size:28px;font-weight:700}.sub{color:#475569;font-size:14px;margin-bottom:16px}
+.panel{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 6px 20px rgba(31,41,55,.12)}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{appearance:none;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:12px;padding:12px 16px;font-size:16px;font-weight:600;cursor:pointer}
+.pill{border-radius:999px}.primary{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:transparent}.accent{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;border-color:transparent}
+select,input[type=number]{padding:10px 12px;border-radius:10px;border:1px solid #cbd5e1;font-size:16px}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}@media(min-width:860px){.cards{grid-template-columns:repeat(3,1fr)}}
+.card{background:#fff;border:2px solid #e2e8f0;border-radius:20px;padding:22px;text-align:center;font-size:clamp(22px,5vw,34px);font-weight:700;user-select:none;cursor:pointer}
+.c1{border-color:rgba(124,58,237,.22);background:rgba(124,58,237,.10)}.c2{border-color:rgba(22,163,74,.22);background:rgba(22,163,74,.10)}
+.c3{border-color:rgba(245,158,11,.22);background:rgba(245,158,11,.10)}.c4{border-color:rgba(2,132,199,.22);background:rgba(2,132,199,.10)}
+.c5{border-color:rgba(239,68,68,.22);background:rgba(239,68,68,.10)}.c6{border-color:rgba(6,182,212,.22);background:rgba(6,182,212,.10)}
+.progress{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-bottom:8px}.progress>div{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);width:0%}
+.hidden{display:none !important}.wordlist{max-height:260px;overflow:auto;border:1px solid #e2e8f0;border-radius:12px;padding:8px;background:#fff}
+.worditem{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px dashed #e2e8f0}.worditem:last-child{border-bottom:none}
+.celebrate{position:fixed;inset:0;background:rgba(255,255,255,.86);backdrop-filter:blur(4px);z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.celebrate h2{font-size:clamp(28px,7vw,56px);margin:0 0 8px}canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:9}
+</style>
+</head>
+<body class="theme-rainbow">
+<canvas id="confetti"></canvas>
+<div class="app"><div class="panel">
+  <div class="row" style="justify-content:space-between;align-items:flex-end;gap:10px">
+    <div><h1>Theresa & Nolan — Word Finder</h1><div class="sub">Mixed case · 6 choices · 25 rounds · <span style="padding:6px 10px;background:#f1f5f9;border-radius:999px;">Grandma Mode</span></div></div>
+    <div class="row">
+      <label>Theme: <select id="themeSel"><option value="rainbow">Rainbow</option><option value="sunny">Sunny</option><option value="ocean">Ocean</option><option value="jungle">Jungle</option></select></label>
+      <button id="btnStart" class="btn primary pill">Start Session</button>
+      <button id="btnRepeat" class="btn accent pill">Repeat</button>
+    </div>
+  </div>
+
+  <div class="progress"><div id="prog"></div></div>
+  <div id="practice"><div id="prompt" class="sub" style="margin:12px 0 8px;">Find the word… <strong id="targetWord">_____</strong></div><div id="choices" class="cards"></div></div>
+
+  <div id="celebration" class="celebrate hidden" role="dialog" aria-live="polite">
+    <h2>🎉 YAY NOLAN! 🎉</h2><div class="row" style="justify-content:center;margin-top:8px"><button id="btnPlayAgain" class="btn primary pill">Play Again</button></div>
+  </div>
+
+  <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0">
+  <details id="settings"><summary class="btn pill" style="display:inline-block;">Grandma Mode (settings)</summary>
+    <div class="row" style="margin-top:12px">
+      <label>Choices per round: <input type="number" id="inpChoices" min="2" max="8" value="6"/></label>
+      <label>Rounds per session: <input type="number" id="inpRounds" min="5" max="50" value="25"/></label>
+      <label><input type="checkbox" id="chkSpell" checked/> Also spell it out (S‑N‑O‑W… snow)</label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="btnExport" class="btn pill">Export words</button>
+      <label class="btn pill" for="fileImport" style="cursor:pointer;">Import words<input id="fileImport" type="file" accept="application/json" class="hidden"></label>
+      <span style="font-size:12px;color:#64748b">Saved privately on this device.</span>
+    </div>
+    <h3 style="margin:8px 0 6px;font-size:16px">Active Practice List</h3>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div class="row"><button id="btnSelectAll" class="btn pill">Select all</button><button id="btnClearAll" class="btn pill">Clear all</button></div>
+      <span style="font-size:12px;color:#64748b">Tap 🎙 to record Grandma voice · ▶️ to play</span>
+    </div>
+    <div id="wordList" class="wordlist"></div>
+  </details>
+</div></div>
+
+<script>
+const LS_KEY="tn_wordfinder_v3";
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(p=>p[1]);
+const save=s=>localStorage.setItem(LS_KEY,JSON.stringify(s));
+const load=()=>{try{return JSON.parse(localStorage.getItem(LS_KEY))||null}catch(e){return null}};
+
+const DEFAULT={theme:"rainbow",choices:6,rounds:25,spell:true,library:{words:["a", "about", "after", "again", "all", "am", "an", "and", "any", "are", "as", "ask", "at", "away", "back", "ball", "be", "because", "been", "before", "best", "better", "big", "black", "blue", "both", "bring", "brown", "but", "by", "call", "came", "can", "carry", "clean", "cold", "come", "cut", "day", "did", "do", "does", "done", "down", "draw", "drink", "eat", "eight", "every", "fall", "far", "fast", "find", "first", "five", "fly", "for", "found", "four", "from", "full", "funny", "gave", "get", "give", "go", "goes", "going", "good", "got", "green", "had", "has", "have", "he", "help", "her", "here", "hers", "him", "his", "hold", "hot", "how", "hurt", "I", "if", "in", "into", "is", "it", "its", "jump", "just", "keep", "kind", "know", "laugh", "let", "light", "like", "little", "live", "long", "look", "make", "many", "may", "me", "more", "most", "much", "must", "my", "myself", "near", "never", "new", "nine", "no", "not", "now", "of", "off", "old", "on", "once", "one", "only", "open", "or", "our", "out", "over", "own", "people", "play", "please", "pretty", "pull", "push", "put", "ran", "read", "red", "ride", "right", "round", "run", "said", "saw", "say", "see", "seven", "shall", "she", "show", "sing", "six", "sleep", "small", "soon", "start", "stop", "take", "tell", "ten", "thank", "that", "the", "their", "them", "then", "there", "these", "they", "think", "this", "those", "three", "to", "today", "together", "too", "try", "two", "under", "up", "upon", "us", "use", "very", "walk", "want", "warm", "was", "wash", "we", "well", "went", "were", "what", "when", "where", "which", "white", "who", "why", "will", "wish", "with", "work", "would", "write", "yellow", "yes", "you", "your"]},active:[],audioMap:{},missCounts:{}};
+let STATE=load()||DEFAULT; if(!STATE.active||STATE.active.length===0) STATE.active=STATE.library.words.slice(0,60);
+
+function applyTheme(name){document.body.className='theme-'+name}
+applyTheme(STATE.theme);
+
+const el={themeSel:document.getElementById('themeSel'),btnStart:document.getElementById('btnStart'),btnRepeat:document.getElementById('btnRepeat'),btnPlayAgain:document.getElementById('btnPlayAgain'),choices:document.getElementById('choices'),prog:document.getElementById('prog'),celebration:document.getElementById('celebration'),inpChoices:document.getElementById('inpChoices'),inpRounds:document.getElementById('inpRounds'),chkSpell:document.getElementById('chkSpell'),wordList:document.getElementById('wordList'),btnExport:document.getElementById('btnExport'),fileImport:document.getElementById('fileImport'),btnSelectAll:document.getElementById('btnSelectAll'),btnClearAll:document.getElementById('btnClearAll')};
+el.themeSel.value=STATE.theme; el.inpChoices.value=STATE.choices; el.inpRounds.value=STATE.rounds; el.chkSpell.checked=STATE.spell;
+el.themeSel.addEventListener('change',()=>{STATE.theme=el.themeSel.value;save(STATE);applyTheme(STATE.theme)});
+
+function renderWordList(){
+  const a=new Set(STATE.active); el.wordList.innerHTML='';
+  for(const w of STATE.library.words){
+    const row=document.createElement('div'); row.className='worditem';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=a.has(w);
+    cb.addEventListener('change',()=>{ if(cb.checked) STATE.active.push(w); else STATE.active=STATE.active.filter(x=>x!==w); STATE.active=[...new Set(STATE.active)]; save(STATE); });
+    const lab=document.createElement('label'); lab.textContent=w; lab.style.flex='1';
+    const rec=document.createElement('button'); rec.className='btn pill'; rec.textContent='🎙'; rec.addEventListener('click',()=>recordWord(w,rec));
+    const play=document.createElement('button'); play.className='btn pill'; play.textContent='▶️'; play.addEventListener('click',()=>playWord(w));
+    row.append(cb,lab,rec,play); el.wordList.appendChild(row);
+  }
+}
+renderWordList();
+el.btnSelectAll.addEventListener('click',()=>{STATE.active=[...STATE.library.words]; save(STATE); renderWordList();});
+el.btnClearAll.addEventListener('click',()=>{STATE.active=[]; save(STATE); renderWordList();});
+el.inpChoices.addEventListener('change',()=>{STATE.choices=Math.max(2,Math.min(8,parseInt(el.inpChoices.value||6))); save(STATE);});
+el.inpRounds.addEventListener('change',()=>{STATE.rounds=Math.max(5,Math.min(50,parseInt(el.inpRounds.value||25))); save(STATE);});
+el.chkSpell.addEventListener('change',()=>{STATE.spell=!!el.chkSpell.checked; save(STATE);});
+
+function speak(text){ if(!('speechSynthesis'in window))return; const u=new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=0.95; speechSynthesis.cancel(); speechSynthesis.speak(u); }
+function letterName(ch){const m={A:'ay',B:'bee',C:'see',D:'dee',E:'ee',F:'ef',G:'jee',H:'aych',I:'eye',J:'jay',K:'kay',L:'el',M:'em',N:'en',O:'oh',P:'pee',Q:'cue',R:'ar',S:'ess',T:'tee',U:'you',V:'vee',W:'double you',X:'ex',Y:'why',Z:'zee'}; return m[ch.toUpperCase()]||ch; }
+
+async function recordWord(word,btn){
+  if(!navigator.mediaDevices){ alert("Microphone not available. Use HTTPS and allow mic."); return; }
+  btn.disabled=true; btn.textContent='⏺…';
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  if(window.MediaRecorder){
+    const type=(MediaRecorder.isTypeSupported&& (MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':MediaRecorder.isTypeSupported('audio/aac')?'audio/aac':MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':''))||'';
+    try{
+      const rec=new MediaRecorder(stream,type?{mimeType:type}:undefined); const chunks=[];
+      rec.ondataavailable=e=>chunks.push(e.data);
+      rec.onstop=()=>{ stream.getTracks().forEach(t=>t.stop()); const blob=new Blob(chunks,{type:type||'audio/mp4'}); const r=new FileReader(); r.onloadend=()=>{STATE.audioMap[word]=r.result; save(STATE); btn.disabled=false; btn.textContent='🎙';}; r.readAsDataURL(blob); };
+      rec.start(); setTimeout(()=>rec.stop(),1800); return;
+    }catch(e){ /* fallthrough to WAV */ }
+  }
+  try{ // WAV fallback
+    const C=new (window.AudioContext||window.webkitAudioContext)(); const src=C.createMediaStreamSource(stream); const p=C.createScriptProcessor(4096,1,1); const chunks=[];
+    p.onaudioprocess=e=>{ chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); }; src.connect(p); p.connect(C.destination);
+    setTimeout(()=>{
+      p.disconnect(); src.disconnect(); stream.getTracks().forEach(t=>t.stop());
+      const data=mergeFloat32(chunks); const wav=encodeWAV(data,C.sampleRate,16000); const blob=new Blob([wav],{type:'audio/wav'});
+      const r=new FileReader(); r.onloadend=()=>{STATE.audioMap[word]=r.result; save(STATE); btn.disabled=false; btn.textContent='🎙';}; r.readAsDataURL(blob);
+    },1800);
+  }catch(err){ alert("Recording failed on this device."); btn.disabled=false; btn.textContent='🎙'; }
+}
+function mergeFloat32(parts){let len=0; for(const c of parts) len+=c.length; const out=new Float32Array(len); let off=0; for(const c of parts){out.set(c,off); off+=c.length;} return out;}
+function encodeWAV(samples,inSR,outSR){const ratio=inSR/outSR,n=Math.floor(samples.length/ratio),pcm=new Int16Array(n);for(let i=0;i<n;i++){const s=samples[Math.floor(i*ratio)]||0;pcm[i]=Math.max(-1,Math.min(1,s))*0x7FFF;}const br=outSR*2,ba=2,buf=new ArrayBuffer(44+pcm.length*2),v=new DataView(buf);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};let o=0;w(o,'RIFF');o+=4;v.setUint32(o,36+pcm.length*2,true);o+=4;w(o,'WAVE');o+=4;w(o,'fmt ');o+=4;v.setUint32(o,16,true);o+=4;v.setUint16(o,1,true);o+=2;v.setUint16(o,1,true);o+=2;v.setUint32(o,outSR,true);o+=4;v.setUint32(o,br,true);o+=4;v.setUint16(o,ba,true);o+=2;v.setUint16(o,16,true);o+=2;w(o,'data');o+=4;v.setUint32(o,pcm.length*2,true);o+=4;for(let i=0;i<pcm.length;i++,o+=2)v.setInt16(o,pcm[i],true);return buf;}
+
+function playWord(w){const d=STATE.audioMap[w]; if(d) new Audio(d).play(); else speak(w);}
+
+let session=null;
+function weight(w){return 1+(STATE.missCounts[w]||0)*2}
+function newSession(){const pool=(STATE.active&&STATE.active.length>0)?[...STATE.active]:[...STATE.library.words]; if(pool.length<STATE.choices) return alert('Select more words in Grandma Mode.');
+  const bag=[]; for(const w of pool) for(let i=0;i<weight(w);i++) bag.push(w);
+  const targets=[]; while(targets.length<Math.min(STATE.rounds,pool.length*4)) targets.push(bag[Math.floor(Math.random()*bag.length)]);
+  const rounds=targets.map(t=>{const others=shuffle(pool.filter(x=>x!==t)).slice(0,STATE.choices-1); return {target:t,choices:shuffle([t,...others])};});
+  session={i:0,rounds,corrects:0}; el.celebration.classList.add('hidden'); renderRound(); setTimeout(repeatPrompt,200);
+}
+function renderRound(){const r=session.rounds[session.i]; document.getElementById('targetWord').textContent=r.target; el.choices.innerHTML=''; const cols=['c1','c2','c3','c4','c5','c6']; r.choices.forEach((c,i)=>{const b=document.createElement('button'); b.className='card '+cols[i%cols.length]; b.textContent=c; b.onclick=()=>pick(c); el.choices.appendChild(b);}); el.prog.style.width=Math.round((session.i)/(session.rounds.length)*100)+'%';}
+function repeatPrompt(){const t=session.rounds[session.i].target; if(STATE.audioMap[t]) new Audio(STATE.audioMap[t]).play(); else{ const say=STATE.spell?t.split('').map(letterName).join(' - ')+'. '+t:t; speak(say); }}
+function pick(c){const t=session.rounds[session.i].target; if(c===t){chime(); session.corrects++; setTimeout(nextRound,420);} else {STATE.missCounts[t]=(STATE.missCounts[t]||0)+1; save(STATE); setTimeout(repeatPrompt,200);}}
+function nextRound(){if(session.i<session.rounds.length-1){session.i++; renderRound(); setTimeout(repeatPrompt,150);} else {el.prog.style.width='100%'; celebrate();}}
+function celebrate(){el.celebration.classList.remove('hidden'); confettiGo(); cheer();}
+
+function chime(){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(),g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type='triangle'; const now=ctx.currentTime; o.frequency.setValueAtTime(880,now); o.frequency.exponentialRampToValueAtTime(1320,now+0.18); g.gain.setValueAtTime(0.0001,now); g.gain.exponentialRampToValueAtTime(0.3,now+0.02); g.gain.exponentialRampToValueAtTime(0.0001,now+0.35); o.start(now); o.stop(now+0.36);}catch(e){}}
+function cheer(){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(); const nB=(t,d)=>{const sr=44100,fc=Math.floor(sr*d),b=ctx.createBuffer(1,fc,sr),dat=b.getChannelData(0);for(let i=0;i<fc;i++) dat[i]=(Math.random()*2-1)*(1-i/fc); const s=ctx.createBufferSource(); s.buffer=b; const g=ctx.createGain(); s.connect(g); g.connect(ctx.destination); g.gain.value=.22; s.start(t);}; const whoop=(t,d)=>{const o=ctx.createOscillator(),g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type='sine'; o.frequency.setValueAtTime(440,t); o.frequency.exponentialRampToValueAtTime(660,t+d); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.18,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+d); o.start(t); o.stop(t+d);}; const now=ctx.currentTime; for(let i=0;i<12;i++) nB(now+Math.random()*1.2,0.08+Math.random()*0.05); whoop(now+0.2,0.5); whoop(now+0.8,0.5);}catch(e){}}
+
+(function(){const cv=document.getElementById('confetti'); const cx=cv.getContext('2d'); function rs(){cv.width=innerWidth; cv.height=innerHeight} addEventListener('resize',rs); rs(); let pcs=[]; function sp(n=200){pcs=Array.from({length:n},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height,v:2+Math.random()*3,c:['#ef4444','#f59e0b','#22c55e','#06b6d4','#3b82f6','#a855f7'][Math.floor(Math.random()*6)],a:Math.random()*Math.PI*2,r:6+Math.random()*6}));} function dr(){cx.clearRect(0,0,cv.width,cv.height); for(const p of pcs){p.y+=p.v; p.x+=Math.sin(p.y*.02); p.a+=.03; cx.save(); cx.translate(p.x,p.y); cx.rotate(p.a); cx.fillStyle=p.c; cx.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6); cx.restore();} requestAnimationFrame(dr);} requestAnimationFrame(dr); window.confettiGo=()=>{sp(240); setTimeout(()=>sp(0),2200);};})();
+
+el.btnStart.addEventListener('click',newSession); el.btnRepeat.addEventListener('click',repeatPrompt); el.btnPlayAgain.addEventListener('click',newSession);
+el.btnExport.addEventListener('click',()=>{const data=new Blob([JSON.stringify({library:STATE.library,active:STATE.active,audioMap:STATE.audioMap},null,2)],{type:'application/json'}); const url=URL.createObjectURL(data); const a=document.createElement('a'); a.href=url; a.download='tn-words.json'; a.click(); URL.revokeObjectURL(url);});
+el.fileImport.addEventListener('change',async e=>{const f=e.target.files[0]; if(!f) return; const txt=await f.text(); try{const j=JSON.parse(txt); if(j.library&&Array.isArray(j.library.words)) STATE.library.words=j.library.words; if(Array.isArray(j.active)) STATE.active=j.active; if(j.audioMap) STATE.audioMap=j.audioMap; save(STATE); renderWordList();}catch(_){alert('Could not read that file.')}});
+</script></body></html>
